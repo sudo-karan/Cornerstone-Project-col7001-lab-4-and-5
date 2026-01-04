@@ -29,36 +29,57 @@ void run_vm(VM *vm) {
     while (vm->running) {
         uint8_t opcode = vm->code[vm->pc++];
         switch (opcode) {
-            case PUSH: {
-                // Read 4 bytes as a 32-bit int [cite: 21]
-                int32_t val = *(int32_t*)&vm->code[vm->pc];
-                push(vm, val);
-                vm->pc += 4;
+            case DUP: {
+                push(vm, vm->stack[vm->sp]); // Duplicate the top element
                 break;
             }
-            case ADD: {
+            case PUSH: {
+                int32_t val = *(int32_t*)&vm->code[vm->pc];
+                push(vm, val);
+                vm->pc += 4;    
+                break;
+            }
+            case ADD: { // Opcode 0x10 
                 int32_t b = pop(vm);
                 int32_t a = pop(vm);
-                push(vm, a + b); // [cite: 24]
+                push(vm, a + b); 
+                break;
+            }
+            case SUB: { // Opcode 0x11 
+                int32_t b = pop(vm);
+                int32_t a = pop(vm);
+                push(vm, a - b);
+                break;
+            }
+            case MUL: { // Opcode 0x12 
+                int32_t b = pop(vm);
+                int32_t a = pop(vm);
+                push(vm, a * b);
+                break;
+            }
+            case CMP: { // Opcode 0x14 
+                int32_t b = pop(vm);
+                int32_t a = pop(vm);
+                push(vm, (a < b) ? 1 : 0); // Push 1 if a < b, else 0 
                 break;
             }
             case STORE: {
                 int32_t idx = *(int32_t*)&vm->code[vm->pc];
-                vm->memory[idx] = pop(vm); // [cite: 31]
+                vm->memory[idx] = pop(vm);
                 vm->pc += 4;
                 break;
             }
             case CALL: {
                 uint32_t addr = *(uint32_t*)&vm->code[vm->pc];
-                vm->return_stack[++vm->rsp] = vm->pc + 4; // Save return addr [cite: 31]
+                vm->return_stack[++vm->rsp] = vm->pc + 4;
                 vm->pc = addr;
                 break;
             }
             case RET: {
-                vm->pc = vm->return_stack[vm->rsp--]; // [cite: 31]
+                vm->pc = vm->return_stack[vm->rsp--];
                 break;
             }
-            case HALT: vm->running = 0; break; // [cite: 21]
+            case HALT: vm->running = 0; break;
         }
     }
 }

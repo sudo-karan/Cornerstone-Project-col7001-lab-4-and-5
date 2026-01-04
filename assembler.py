@@ -6,6 +6,12 @@ OPCODES = {
     "STORE": 0x30, "LOAD": 0x31, "CALL": 0x40, "RET": 0x41
 }
 
+OPCODES = {
+    "PUSH": 0x01, "POP": 0x02, "DUP": 0x03, "HALT": 0xFF,
+    "ADD": 0x10, "SUB": 0x11, "MUL": 0x12, "DIV": 0x13, "CMP": 0x14,
+    "JMP": 0x20, "JZ": 0x21, "JNZ": 0x22,
+    "STORE": 0x30, "LOAD": 0x31, "CALL": 0x40, "RET": 0x41
+}
 def assemble(input_file, output_file):
     with open(input_file, 'r') as f:
         lines = f.readlines()
