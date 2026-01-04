@@ -29,58 +29,106 @@ void run_vm(VM *vm) {
     while (vm->running) {
         uint8_t opcode = vm->code[vm->pc++];
         switch (opcode) {
-            case DUP: {
-                push(vm, vm->stack[vm->sp]); // Duplicate the top element
-                break;
-            }
-            case PUSH: {
-                int32_t val = *(int32_t*)&vm->code[vm->pc];
-                push(vm, val);
-                vm->pc += 4;    
-                break;
-            }
-            case ADD: { // Opcode 0x10 
-                int32_t b = pop(vm);
-                int32_t a = pop(vm);
-                push(vm, a + b); 
-                break;
-            }
-            case SUB: { // Opcode 0x11 
-                int32_t b = pop(vm);
-                int32_t a = pop(vm);
-                push(vm, a - b);
-                break;
-            }
-            case MUL: { // Opcode 0x12 
-                int32_t b = pop(vm);
-                int32_t a = pop(vm);
-                push(vm, a * b);
-                break;
-            }
-            case CMP: { // Opcode 0x14 
-                int32_t b = pop(vm);
-                int32_t a = pop(vm);
-                push(vm, (a < b) ? 1 : 0); // Push 1 if a < b, else 0 
-                break;
-            }
-            case STORE: {
-                int32_t idx = *(int32_t*)&vm->code[vm->pc];
-                vm->memory[idx] = pop(vm);
-                vm->pc += 4;
-                break;
-            }
-            case CALL: {
-                uint32_t addr = *(uint32_t*)&vm->code[vm->pc];
-                vm->return_stack[++vm->rsp] = vm->pc + 4;
-                vm->pc = addr;
-                break;
-            }
-            case RET: {
-                vm->pc = vm->return_stack[vm->rsp--];
-                break;
-            }
-            case HALT: vm->running = 0; break;
+        // 1.6.1 Data Movement
+        case PUSH: {
+            int32_t val = *(int32_t*)&vm->code[vm->pc];
+            push(vm, val);
+            vm->pc += 4;
+            break;
         }
+        case POP: {
+            pop(vm);
+            break;
+        }
+        case DUP: {
+            push(vm, vm->stack[vm->sp]);
+            break;
+        }
+        case HALT: {
+            vm->running = 0;
+            break;
+        }
+
+        // 1.6.2 Arithmetic & Logical
+        case ADD: {
+            int32_t b = pop(vm);
+            int32_t a = pop(vm);
+            push(vm, a + b);
+            break;
+        }
+        case SUB: {
+            int32_t b = pop(vm);
+            int32_t a = pop(vm);
+            push(vm, a - b);
+            break;
+        }
+        case MUL: {
+            int32_t b = pop(vm);
+            int32_t a = pop(vm);
+            push(vm, a * b);
+            break;
+        }
+        case DIV: {
+            int32_t b = pop(vm);
+            int32_t a = pop(vm);
+            if (b != 0) push(vm, a / b);
+            else { fprintf(stderr, "Div by zero\n"); vm->running = 0; }
+            break;
+        }
+        case CMP: {
+            int32_t b = pop(vm);
+            int32_t a = pop(vm);
+            push(vm, (a < b) ? 1 : 0);
+            break;
+        }
+
+        // 1.6.3 Control Flow
+        case JMP: {
+            vm->pc = *(int32_t*)&vm->code[vm->pc];
+            break;
+        }
+        case JZ: {
+            int32_t addr = *(int32_t*)&vm->code[vm->pc];
+            vm->pc += 4;
+            if (pop(vm) == 0) vm->pc = addr;
+            break;
+        }
+        case JNZ: {
+            int32_t addr = *(int32_t*)&vm->code[vm->pc];
+            vm->pc += 4;
+            if (pop(vm) != 0) vm->pc = addr;
+            break;
+        }
+
+        // 1.6.4 Memory & Functions
+        case STORE: {
+            int32_t idx = *(int32_t*)&vm->code[vm->pc];
+            vm->memory[idx] = pop(vm);
+            vm->pc += 4;
+            break;
+        }
+        case LOAD: {
+            int32_t idx = *(int32_t*)&vm->code[vm->pc];
+            push(vm, vm->memory[idx]);
+            vm->pc += 4;
+            break;
+        }
+        case CALL: {
+            uint32_t addr = *(uint32_t*)&vm->code[vm->pc];
+            vm->pc += 4;
+            vm->return_stack[++vm->rsp] = vm->pc; // Store address after the CALL arg
+            vm->pc = addr;
+            break;
+        }
+        case RET: {
+            vm->pc = vm->return_stack[vm->rsp--];
+            break;
+        }
+
+        default:
+            fprintf(stderr, "Unknown Opcode: 0x%02X\n", opcode);
+            vm->running = 0;
+    }
     }
 }
 
