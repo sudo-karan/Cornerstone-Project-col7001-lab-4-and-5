@@ -17,14 +17,36 @@ typedef struct {
     int running;
 } VM;
 
-void push(VM *vm, int32_t val) { vm->stack[++vm->sp] = val; }
-int32_t pop(VM *vm) { return vm->stack[vm->sp--]; }
+// Helper to handle runtime errors safely
+void error(VM *vm, const char *msg) {
+    fprintf(stderr, "Runtime Error: %s\n", msg);
+    vm->running = 0;
+}
+
+void push(VM *vm, int32_t val) {
+    if (vm->sp >= STACK_SIZE - 1) {
+        error(vm, "Stack Overflow");
+        return;
+    }
+    vm->stack[++vm->sp] = val;
+}
+
+int32_t pop(VM *vm) {
+    if (vm->sp < 0) {
+        error(vm, "Stack Underflow");
+        return 0; // Return dummy value, VM will stop anyway
+    }
+    return vm->stack[vm->sp--];
+}
 
 void run_vm(VM *vm) {
     vm->pc = 0;
     vm->sp = -1;
     vm->rsp = -1;
     vm->running = 1;
+
+    // We assume the code size is large enough or trusted, assuming proper loader checks.
+    // In a real VM, you'd also check bounds of vm->pc against code size.
 
     while (vm->running) {
         uint8_t opcode = vm->code[vm->pc++];
@@ -41,6 +63,7 @@ void run_vm(VM *vm) {
             break;
         }
         case DUP: {
+            if (vm->sp < 0) { error(vm, "Stack Underflow"); break; }
             push(vm, vm->stack[vm->sp]);
             break;
         }
@@ -53,32 +76,33 @@ void run_vm(VM *vm) {
         case ADD: {
             int32_t b = pop(vm);
             int32_t a = pop(vm);
-            push(vm, a + b);
+            if (vm->running) push(vm, a + b);
             break;
         }
         case SUB: {
             int32_t b = pop(vm);
             int32_t a = pop(vm);
-            push(vm, a - b);
+            if (vm->running) push(vm, a - b);
             break;
         }
         case MUL: {
             int32_t b = pop(vm);
             int32_t a = pop(vm);
-            push(vm, a * b);
+            if (vm->running) push(vm, a * b);
             break;
         }
         case DIV: {
             int32_t b = pop(vm);
             int32_t a = pop(vm);
+            if (!vm->running) break; 
             if (b != 0) push(vm, a / b);
-            else { fprintf(stderr, "Div by zero\n"); vm->running = 0; }
+            else error(vm, "Division by Zero");
             break;
         }
         case CMP: {
             int32_t b = pop(vm);
             int32_t a = pop(vm);
-            push(vm, (a < b) ? 1 : 0);
+            if (vm->running) push(vm, (a < b) ? 1 : 0);
             break;
         }
 
@@ -90,37 +114,60 @@ void run_vm(VM *vm) {
         case JZ: {
             int32_t addr = *(int32_t*)&vm->code[vm->pc];
             vm->pc += 4;
-            if (pop(vm) == 0) vm->pc = addr;
+            int32_t val = pop(vm);
+            if (vm->running && val == 0) vm->pc = addr;
             break;
         }
         case JNZ: {
             int32_t addr = *(int32_t*)&vm->code[vm->pc];
             vm->pc += 4;
-            if (pop(vm) != 0) vm->pc = addr;
+            int32_t val = pop(vm);
+            if (vm->running && val != 0) vm->pc = addr;
             break;
         }
 
         // 1.6.4 Memory & Functions
         case STORE: {
             int32_t idx = *(int32_t*)&vm->code[vm->pc];
-            vm->memory[idx] = pop(vm);
             vm->pc += 4;
+            int32_t val = pop(vm);
+            if (!vm->running) break;
+            
+            if (idx < 0 || idx >= MEM_SIZE) {
+                error(vm, "Memory Access Out of Bounds");
+            } else {
+                vm->memory[idx] = val;
+            }
             break;
         }
         case LOAD: {
             int32_t idx = *(int32_t*)&vm->code[vm->pc];
-            push(vm, vm->memory[idx]);
             vm->pc += 4;
+            
+            if (idx < 0 || idx >= MEM_SIZE) {
+                error(vm, "Memory Access Out of Bounds");
+            } else {
+                push(vm, vm->memory[idx]);
+            }
             break;
         }
         case CALL: {
             uint32_t addr = *(uint32_t*)&vm->code[vm->pc];
             vm->pc += 4;
-            vm->return_stack[++vm->rsp] = vm->pc; // Store address after the CALL arg
+            
+            if (vm->rsp >= STACK_SIZE - 1) {
+                error(vm, "Return Stack Overflow");
+                break;
+            }
+            vm->return_stack[++vm->rsp] = vm->pc; 
             vm->pc = addr;
             break;
         }
         case RET: {
+            if (vm->rsp < 0) {
+                error(vm, "Return Stack Underflow");
+                break;
+            }
             vm->pc = vm->return_stack[vm->rsp--];
             break;
         }
@@ -128,23 +175,39 @@ void run_vm(VM *vm) {
         default:
             fprintf(stderr, "Unknown Opcode: 0x%02X\n", opcode);
             vm->running = 0;
-    }
+        }
     }
 }
 
 int main(int argc, char **argv) {
     if (argc < 2) return 1;
     FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        fprintf(stderr, "Error opening file %s\n", argv[1]);
+        return 1;
+    }
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
+    
     uint8_t *code = malloc(size);
+    if (!code) {
+        fclose(f);
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+    
     fread(code, 1, size, f);
     fclose(f);
 
     VM vm = { .code = code };
     run_vm(&vm);
-    printf("Top of stack: %d\n", vm.stack[vm.sp]);
+    
+    if (vm.sp >= 0)
+        printf("Top of stack: %d\n", vm.stack[vm.sp]);
+    else
+        printf("Stack empty\n");
+
     free(code);
     return 0;
 }
