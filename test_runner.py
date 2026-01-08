@@ -18,6 +18,8 @@ tests = [
     ("test_call.asm", 25, None),
     ("test_call2.asm", 25, None),
     ("test_branching.asm", 1, None),
+    ("test_memory.asm", 123, None),
+    ("test_factorial.asm", 120, None),
     # Error Scenarios
     ("test_stack_underflow.asm", None, "Stack Underflow"),
     ("test_stack_overflow.asm", None, "Stack Overflow"),
