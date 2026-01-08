@@ -17,6 +17,7 @@ tests = [
     ("test_loop.asm", 0, None),
     ("test_call.asm", 25, None),
     ("test_call2.asm", 25, None),
+    ("test_branching.asm", 1, None),
     # Error Scenarios
     ("test_stack_underflow.asm", None, "Stack Underflow"),
     ("test_stack_overflow.asm", None, "Stack Overflow"),
