@@ -25,4 +25,8 @@
 #define CALL  0x40
 #define RET   0x41
 
+// Standard Library
+#define PRINT 0x50
+#define INPUT 0x51
+
 #endif

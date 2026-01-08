@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "opcodes.h"
+#include "jit.h"
 
 #define STACK_SIZE 256
 #define MEM_SIZE 1024
@@ -61,6 +63,7 @@ void run_vm(VM *vm) {
             vm->pc += 4;
             break;
         }
+
         case POP: {
             pop(vm);
             break;
@@ -175,6 +178,33 @@ void run_vm(VM *vm) {
             break;
         }
 
+        // 1.6.5 Standard Library
+        case PRINT: {
+            if (vm->sp < 0) {
+                error(vm, "Stack Underflow");
+                break;
+            }
+            printf("%d\n", vm->stack[vm->sp--]);
+            fflush(stdout);
+            break;
+        }
+        case INPUT: {
+            int val;
+            printf("Enter number: ");
+            if (scanf("%d", &val) == 1) {
+                if (vm->sp >= STACK_SIZE - 1) {
+                    error(vm, "Stack Overflow");
+                    break;
+                }
+                vm->stack[++vm->sp] = val;
+            } else {
+                fprintf(stderr, "Error: Invalid input\n");
+                vm->running = 0;
+                vm->error = 1;
+            }
+            break;
+        }
+
         default:
             fprintf(stderr, "Unknown Opcode: 0x%02X\n", opcode);
             vm->running = 0;
@@ -205,12 +235,32 @@ int main(int argc, char **argv) {
     fclose(f);
 
     VM vm = { .code = code };
-    run_vm(&vm);
-    
-    if (!vm.error && vm.sp >= 0)
-        printf("Top of stack: %d\n", vm.stack[vm.sp]);
-    else if (!vm.error)
-        printf("Stack empty\n");
+
+    // Check for JIT flag
+    int use_jit = 0;
+    if (argc > 2 && strcmp(argv[2], "--jit") == 0) {
+        use_jit = 1;
+    }
+
+    if (use_jit) {
+        printf("Running with JIT...\n");
+        jit_func jitted_code = compile(code, size);
+        if (jitted_code) {
+            // JIT returns the top of the stack as an integer
+            int result = jitted_code();
+            printf("JIT Result: %d\n", result);
+        } else {
+            fprintf(stderr, "JIT Compilation Failed\n");
+            return 1;
+        }
+    } else {
+        run_vm(&vm);
+        
+        if (!vm.error && vm.sp >= 0)
+            printf("Top of stack: %d\n", vm.stack[vm.sp]);
+        else if (!vm.error)
+            printf("Stack empty\n");
+    }
 
     free(code);
     return vm.error ? 1 : 0;

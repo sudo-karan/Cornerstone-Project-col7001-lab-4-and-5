@@ -13,23 +13,33 @@ def run_benchmark():
     print(f"Assembling {ASM_FILE}...")
     subprocess.check_call(["python3", "assembler.py", ASM_FILE, BIN_FILE])
     
-    print(f"Running benchmark ({ITERATIONS} iterations)...")
-    start_time = time.time()
-    
+    # --- Run Interpreter ---
+    print(f"Running Interpreter ({ITERATIONS} iterations)...")
+    start_time_int = time.time()
     subprocess.check_call(["./vm", BIN_FILE], stdout=subprocess.DEVNULL)
+    end_time_int = time.time()
+    duration_int = end_time_int - start_time_int
     
-    end_time = time.time()
-    duration = end_time - start_time
+    # --- Run JIT ---
+    print(f"Running JIT ({ITERATIONS} iterations)...")
+    start_time_jit = time.time()
+    subprocess.check_call(["./vm", BIN_FILE, "--jit"], stdout=subprocess.DEVNULL)
+    end_time_jit = time.time()
+    duration_jit = end_time_jit - start_time_jit
     
+    # --- Results ---
     total_instructions = ITERATIONS * INSTRUCTIONS_PER_LOOP
-    ips = total_instructions / duration
+    ips_int = total_instructions / duration_int
+    ips_jit = total_instructions / duration_jit
+    speedup = ips_jit / ips_int
     
     results = [
-        "-" * 50,
-        f"Time Taken: {duration:.4f} seconds",
-        f"Total Instructions: ~{total_instructions:,}",
-        f"Speed: {ips:,.0f} Instructions/sec",
-        "-" * 50
+        "-" * 60,
+        f"{'Mode':<15} | {'Time (s)':<10} | {'IPS':<15} | {'Speedup':<10}",
+        "-" * 60,
+        f"{'Interpreter':<15} | {duration_int:<10.4f} | {ips_int:<15,.0f} | {'1.0x':<10}",
+        f"{'JIT':<15} | {duration_jit:<10.4f} | {ips_jit:<15,.0f} | {f'{speedup:.1f}x':<10}",
+        "-" * 60
     ]
     
     for line in results:

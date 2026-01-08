@@ -1,0 +1,5 @@
+-------------------------------------------------------------------------------------
+Interpreter: 19/19 passed
+JIT:         7/15 passed (8 skipped)
+Total:       26/26 passed (100.0%)
+All tests passed!
