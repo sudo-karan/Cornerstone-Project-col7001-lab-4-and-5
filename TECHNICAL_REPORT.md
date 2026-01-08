@@ -10,7 +10,12 @@ The system is designed to meet requirements for deterministic execution, robust 
 
 ## 2. System Architecture
 
-The VM architecture follows a **Harvard-like** model where code (bytecode) and data (stack/memory) are logically separated, although they share the host process's address space.
+The VM architecture follows a **Harvard-like** model. Unlike Von Neumann architectures (e.g., x86) where code and data share memory, this VM strictly breaks them apart:
+
+- **Code Memory** (`code[]`): Read-Only during execution. Accessed only by `PC`.
+- **Data Memory** (`stack[]`, `memory[]`): Read/Write. Accessed by `SP`, `ALU`, `LOAD`, `STORE`.
+
+**Benefit:** This design inherently prevents **Self-Modifying Code** and widely eliminates classes of bugs like buffer overflows overwriting instructions. `STORE` instructions literally _cannot_ target the instruction pointer's source.
 
 ### 2.1 Memory Model
 
@@ -142,6 +147,29 @@ sequenceDiagram
 
 - Simplifies stack management (no need to calculate offsets to skip over return addresses).
 - Enables deep recursion (up to 256 levels) without complex frame pointer logic.
+
+### 3.3 Instruction Set Architecture (ISA)
+
+The VM uses a simple, regular 32-bit integer ISA.
+
+| Opcode | Mnemonic  | Args | Stack Effect                | Description              |
+| :----- | :-------- | :--- | :-------------------------- | :----------------------- |
+| `0x01` | **PUSH**  | 4B   | `[] -> [val]`               | Push 32-bit constant.    |
+| `0x02` | **POP**   | -    | `[val] -> []`               | Discard top.             |
+| `0x03` | **DUP**   | -    | `[a] -> [a, a]`             | Duplicate top.           |
+| `0xFF` | **HALT**  | -    | `N/A`                       | Stop VM.                 |
+| `0x10` | **ADD**   | -    | `[a, b] -> [a+b]`           | Add top two.             |
+| `0x11` | **SUB**   | -    | `[a, b] -> [a-b]`           | Subtract (Second - Top). |
+| `0x12` | **MUL**   | -    | `[a, b] -> [a*b]`           | Multiply.                |
+| `0x13` | **DIV**   | -    | `[a, b] -> [a/b]`           | Divide (Error on 0).     |
+| `0x14` | **CMP**   | -    | `[a, b] -> [0/1]`           | 1 if a < b, else 0.      |
+| `0x20` | **JMP**   | 4B   | `N/A`                       | Unconditional jump.      |
+| `0x21` | **JZ**    | 4B   | `[a] -> []`                 | Jump if a == 0.          |
+| `0x22` | **JNZ**   | 4B   | `[a] -> []`                 | Jump if a != 0.          |
+| `0x30` | **STORE** | 4B   | `[a] -> []`                 | Store a to Memory[idx].  |
+| `0x31` | **LOAD**  | 4B   | `[] -> [a]`                 | Load from Memory[idx].   |
+| `0x40` | **CALL**  | 4B   | `R:[mask] -> R:[mask, ret]` | Call function.           |
+| `0x41` | **RET**   | -    | `R:[..., ret] -> R:[...]`   | Return from function.    |
 
 ---
 
