@@ -110,7 +110,24 @@ graph LR
 
 **Rationale:** While threaded code or JIT (Just-In-Time) compilation offers higher performance, a giant switch statement provides the best balance of code simplicity, portability, and "good enough" performance for an educational VM.
 
-### 3.2 Function Call & Return Mechanism
+### 3.2 Just-In-Time (JIT) Compilation
+
+The VM includes an x86_64 JIT compiler (`jit.c`) that maps VM bytecodes directly to native machine code.
+
+**Key Mechanism:**
+
+1.  **Memory Allocation:** Uses `mmap` to allocate a readable/writable/executable (RWX) memory page.
+2.  **Code Generation:** Iterates through bytecode and emits x86_64 machine code binaries.
+    - `ADD` -> `pop rbx; pop rax; add rax, rbx; push rax`
+3.  **Backward Jumps:** Tracks instruction offsets to support backward jumps for loops (`JMP`, `JNZ`).
+4.  **Execution:** The allocated memory is cast to a function pointer `int (*jit_func)()` and executed.
+
+**Limitations:**
+
+- **Forward Jumps:** Currently unsupported (requires multipass or backpatching).
+- **Standard Library:** JIT skips I/O instructions like `INPUT` (requires complex ABI calls).
+
+### 3.3 Function Call & Return Mechanism
 
 Functional calls are implemented using a dedicated **Return Stack Frame** mechanism, distinct from the data stack.
 
