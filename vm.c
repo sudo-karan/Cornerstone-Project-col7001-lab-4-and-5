@@ -50,11 +50,21 @@ void mark(VM *vm, int32_t addr) {
     
     vm->heap[obj_idx + 2] = 1; // Set mark bit.
 
-    // Note: This test verifies transitive reachability.
-    // It is expected to fail or pass partially until recursive marking is fully implemented.
-    // printf("GC: Marked object at %d\n", obj_idx);
-
-    // Placeholder for recursive marking to achieve transitive reachability.
+    // Recursive Marking (Transitive Reachability)
+    int32_t size = vm->heap[obj_idx]; // Header[0] is size
+    int32_t payload_idx = obj_idx + 3; // Skip 3-word header
+    
+    for (int i = 0; i < size; i++) {
+        int32_t val = vm->heap[payload_idx + i];
+        // Check if value is a pointer into the heap
+        if (val >= MEM_SIZE && val < MEM_SIZE + HEAP_SIZE) {
+            int32_t child_payload_idx = val - MEM_SIZE;
+            int32_t child_header_idx = child_payload_idx - 3;
+            if (child_header_idx >= 0) {
+                mark(vm, child_header_idx);
+            }
+        }
+    }
 }
 
 void sweep(VM *vm) {
