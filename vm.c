@@ -10,18 +10,18 @@
 #define HEAP_SIZE 4096
 
 typedef struct {
-    int32_t size;      // Size of payload
-    int32_t next;      // Next object in allocated list
-    uint8_t marked;    // Mark bit
+    int32_t size;      // Payload size in words
+    int32_t next;      // Pointer to next allocated object (for GC sweeping)
+    uint8_t marked;    // Garbage Collection accessibility flag (0 = Unmarked, 1 = Marked)
 } ObjectHeader;
 
 typedef struct {
     int32_t stack[STACK_SIZE];
-    int sp;                // Stack Pointer
+    int sp;                // Data Stack Pointer
     int32_t memory[MEM_SIZE];
     int32_t heap[HEAP_SIZE];
-    int32_t free_ptr;      // Simple bump pointer for now
-    int32_t allocated_list; // Head of allocated objects list
+    int32_t free_ptr;      // Heap allocation pointer (Bump Pointer)
+    int32_t allocated_list; // Linked list head of allocated objects
     uint32_t return_stack[STACK_SIZE];
     int rsp;               // Return Stack Pointer
     uint8_t *code;         // Bytecode array
@@ -62,9 +62,13 @@ void run_vm(VM *vm) {
     vm->sp = -1;
     vm->rsp = -1;
     vm->running = 1;
+    vm->pc = 0;
+    vm->sp = -1;
+    vm->rsp = -1;
+    vm->running = 1;
     vm->error = 0;
-    vm->free_ptr = 0; // Start at beginning of heap
-    vm->allocated_list = -1; // -1 indicates end of list
+    vm->free_ptr = 0; // Initialize heap pointer to start
+    vm->allocated_list = -1; // -1 denotes end of linked list
 
     // We assume the code size is large enough or trusted, assuming proper loader checks.
     // In a real VM, you'd also check bounds of vm->pc against code size.
@@ -239,21 +243,23 @@ void run_vm(VM *vm) {
             int32_t size = pop(vm);
             if (size < 0) { error(vm, "Invalid Allocation Size"); break; }
             
+            // Header: 3 words [Size, Next, Marked]
             int needed = size + 3; 
             if (vm->free_ptr + needed > HEAP_SIZE) {
+                // TODO: Trigger Garbage Collection
                 error(vm, "Heap Overflow");
                 break;
             }
 
             int32_t addr = vm->free_ptr;
-            vm->heap[addr] = size;     // SIZE
-            vm->heap[addr + 1] = vm->allocated_list; // NEXT
-            vm->heap[addr + 2] = 0;    // MARKED
+            vm->heap[addr] = size;                     // Header[0]: Size
+            vm->heap[addr + 1] = vm->allocated_list;   // Header[1]: Next Object
+            vm->heap[addr + 2] = 0;                    // Header[2]: Mark Bit
             
-            vm->allocated_list = addr;
-            vm->free_ptr += needed;
+            vm->allocated_list = addr;                 // Update List Head
+            vm->free_ptr += needed;                    // Advance Pointer
             
-            // Return pointer to PAYLOAD (skip header)
+            // Push address of payload (skip header) to stack
             push(vm, MEM_SIZE + addr + 3);
             break;
         }
