@@ -66,9 +66,9 @@ void reset_vm(VM *vm) {
 
 /* --- Tests --- */
 
-// 1.6.1 Basic Reachability
+// Basic Reachability
 void test_gc_basic_reachability() {
-    printf("\n=== Test 1.6.1: Basic Reachability ===\n");
+    printf("\n=== Test: Basic Reachability ===\n");
     VM vm; reset_vm(&vm);
     
     Obj a = new_pair(0, 0);
@@ -82,9 +82,9 @@ void test_gc_basic_reachability() {
     assert(count == 1);
 }
 
-// 1.6.2 Unreachable Object Collection
+// Unreachable Object Collection
 void test_gc_unreachable_object_collection() {
-    printf("\n=== Test 1.6.2: Unreachable Object Collection ===\n");
+    printf("\n=== Test: Unreachable Object Collection ===\n");
     VM vm; reset_vm(&vm);
     
     new_pair(0, 0); // Allocate but don't push (unreachable)
@@ -97,9 +97,9 @@ void test_gc_unreachable_object_collection() {
     assert(count == 0);
 }
 
-// 1.6.3 Transitive Reachability
+// Transitive Reachability
 void test_gc_transitive_reachability() {
-    printf("\n=== Test 1.6.3: Transitive Reachability ===\n");
+    printf("\n=== Test: Transitive Reachability ===\n");
     VM vm; reset_vm(&vm);
     
     Obj a = new_pair(0, 0);
@@ -118,9 +118,9 @@ void test_gc_transitive_reachability() {
     assert(count == 2);
 }
 
-// 1.6.4 Cyclic References
+// Cyclic References
 void test_gc_cyclic_references() {
-    printf("\n=== Test 1.6.4: Cyclic References ===\n");
+    printf("\n=== Test: Cyclic References ===\n");
     VM vm; reset_vm(&vm);
     
     Obj a = new_pair(0, 0);
@@ -141,9 +141,9 @@ void test_gc_cyclic_references() {
     assert(count == 2);
 }
 
-// 1.6.5 Deep Object Graph
+// Deep Object Graph
 void test_gc_deep_object_graph() {
-    printf("\n=== Test 1.6.5: Deep Object Graph ===\n");
+    printf("\n=== Test: Deep Object Graph ===\n");
     VM vm; reset_vm(&vm);
     
     Obj root = new_pair(0, 0);
@@ -164,9 +164,9 @@ void test_gc_deep_object_graph() {
     assert(count == 501); 
 }
 
-// 1.6.7 Stress Allocation
+// Stress Allocation
 void test_gc_stress_allocation() {
-    printf("\n=== Test 1.6.7: Stress Allocation ===\n");
+    printf("\n=== Test: Stress Allocation ===\n");
     VM vm; reset_vm(&vm);
     
     // Allocate many objects, dropping them. GC should reclaim.
