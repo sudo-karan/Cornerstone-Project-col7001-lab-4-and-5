@@ -52,7 +52,14 @@ The VM enforces strict bounds checking to ensure memory safety.
 - **Memory Access Bounds:** Accessing memory outside the valid 0-1023 range (for static memory) or 1024-5119 (for heap) triggers an error.
 - **Heap Access:** Accessing heap memory beyond allocated bounds is also checked.
 
-### 6. Testing the Allocator & GC
+### 6. Correctness Under Stress
+
+To ensure robustness, the systems are designed to handle high-pressure scenarios:
+
+- **Automatic GC Trigger:** The `ALLOC` opcode automatically triggers Garbage Collection when the heap is full. If space is reclaimed, the allocation is retried transparently.
+- **Stress Testing:** A dedicated `test_gc_stress_allocation` creates thousands of objects to force frequent GC cycles and heap exhaustion/reuse scenarios.
+
+### 7. Testing the Allocator & GC
 
 We have created a dedicated white-box C test harness to verify the internal state of the Heap (pointers, headers, linking) without relying on the full Assembler flow.
 
