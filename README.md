@@ -44,7 +44,15 @@ After marking, the **Sweep Phase** reclaims memory.
 - **Linear Scan:** Iterates through the `allocated_list`.
 - **Reclamation:** Objects with `Mark=0` are unlinked and "freed" (conceptually). Objects with `Mark=1` are kept and unmarked for the next cycle.
 
-### 5. Testing the Allocator & GC
+### 5. Memory Safety Features
+
+The VM enforces strict bounds checking to ensure memory safety.
+
+- **Stack Overflow/Underflow:** Pushing to a full stack or popping from an empty one triggers a runtime error.
+- **Memory Access Bounds:** Accessing memory outside the valid 0-1023 range (for static memory) or 1024-5119 (for heap) triggers an error.
+- **Heap Access:** Accessing heap memory beyond allocated bounds is also checked.
+
+### 6. Testing the Allocator & GC
 
 We have created a dedicated white-box C test harness to verify the internal state of the Heap (pointers, headers, linking) without relying on the full Assembler flow.
 
@@ -55,7 +63,24 @@ We have created a dedicated white-box C test harness to verify the internal stat
 gcc -I. test/test_gc_impl.c jit.c -o test_gc && ./test_gc
 ```
 
-**Expected Output:**
+**Memory Safety Tests (Assembler):**
+
+```bash
+# Compile VM
+gcc -o vm vm.c jit.c
+
+# Run Stack Overflow Test
+python3 assembler.py test/test_stack_overflow.asm test/test_stack_overflow.bin
+./vm test/test_stack_overflow.bin
+# Output: Runtime Error: Stack Overflow
+
+# Run Memory Out of Bounds Test
+python3 assembler.py test/test_mem_oob.asm test/test_mem_oob.bin
+./vm test/test_mem_oob.bin
+# Output: Runtime Error: Heap Access Out of Bounds
+```
+
+**Expected Output (GC Tests):**
 The test prints detailed logs of memory addresses and header states.
 
 **1. Allocator Test:**
@@ -78,7 +103,7 @@ Allocator Test Passed.
   Result: 1 objects remaining.
 ```
 
-### 3. Advanced GC Tests (Transitive, Cycles, Deep Graph)
+**3. Advanced GC Tests (Transitive, Cycles, Deep Graph):**
 
 ```text
 === Test: Transitive Reachability ===
