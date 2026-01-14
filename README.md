@@ -30,7 +30,21 @@ We have implemented **Root Discovery** to identify active objects.
 - **Stack Scanning:** The GC iterates through the VM's data stack.
 - **Conservative Identification:** Values on the stack that fall within the specific Heap Memory range are treated as pointers and marked.
 
-### 3. Testing the Allocator & GC
+### 3. Mark Phase (Task 3)
+
+Once roots are identified, the **Mark Phase** recursively visits all reachable objects.
+
+- **Transitive Reachability:** If Object A is marked, and A points to B, then B is also marked.
+- **Cycle Handling:** The mark bit prevents infinite loops in cyclic graphs.
+
+### 4. Sweep Phase (Task 4)
+
+After marking, the **Sweep Phase** reclaims memory.
+
+- **Linear Scan:** Iterates through the `allocated_list`.
+- **Reclamation:** Objects with `Mark=0` are unlinked and "freed" (conceptually). Objects with `Mark=1` are kept and unmarked for the next cycle.
+
+### 5. Testing the Allocator & GC
 
 We have created a dedicated white-box C test harness to verify the internal state of the Heap (pointers, headers, linking) without relying on the full Assembler flow.
 
@@ -62,6 +76,19 @@ Allocator Test Passed.
   [GC] Triggering Garbage Collection...
   [GC] Finished.
   Result: 1 objects remaining.
+```
+
+### 3. Advanced GC Tests (Transitive, Cycles, Deep Graph)
+
+```text
+=== Test: Transitive Reachability ===
+  Result: 2 objects remaining.
+
+=== Test: Cyclic References ===
+  Result: 2 objects remaining.
+
+=== Test: Deep Object Graph ===
+  Result: 501 objects remaining.
 ```
 
 ---
