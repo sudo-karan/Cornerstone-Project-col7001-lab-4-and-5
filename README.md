@@ -49,7 +49,7 @@ After marking, the **Sweep Phase** reclaims memory.
 The VM enforces strict bounds checking to ensure memory safety.
 
 - **Stack Overflow/Underflow:** Pushing to a full stack or popping from an empty one triggers a runtime error.
-- **Memory Access Bounds:** Accessing memory outside the valid 0-1023 range (for static memory) or 1024-5119 (for heap) triggers an error.
+- **Memory Access Bounds:** Accessing memory outside the valid 0-1023 range (for static memory) or 1024-66559 (for heap) triggers an error.
 - **Heap Access:** Accessing heap memory beyond allocated bounds is also checked.
 
 ### 6. Correctness Under Stress
@@ -120,7 +120,10 @@ Allocator Test Passed.
   Result: 2 objects remaining.
 
 === Test: Deep Object Graph ===
-  Result: 501 objects remaining.
+  Result: 10001 objects remaining.
+
+=== Test: Closure Capture ===
+  Result: 3 objects remaining.
 ```
 
 ---
