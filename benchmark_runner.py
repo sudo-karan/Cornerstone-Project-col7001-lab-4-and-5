@@ -44,9 +44,36 @@ def run_benchmark():
     
     for line in results:
         print(line)
+
+    # --- GC Benchmark ---
+    GC_ASM = "benchmark/gc_stress.asm"
+    GC_BIN = "benchmark/gc_stress.bin"
+    GC_ITER = 100_000
+    
+    print(f"\nAssembling {GC_ASM}...")
+    subprocess.check_call(["python3", "assembler.py", GC_ASM, GC_BIN])
+    
+    print(f"Running GC Benchmark ({GC_ITER} allocations)...")
+    start_gc = time.time()
+    subprocess.call(["./vm", GC_BIN], stdout=subprocess.DEVNULL) # Use call to ignore potential non-zero exit if any
+    end_gc = time.time()
+    duration_gc = end_gc - start_gc
+    allocs_per_sec = GC_ITER / duration_gc
+    
+    gc_results = [
+        "\n=== GC Performance ===",
+        f"Time: {duration_gc:.4f} seconds",
+        f"Throughput: {allocs_per_sec:,.0f} allocations/sec"
+    ]
+    for line in gc_results:
+        print(line)
+        results.append(line)
         
     with open("benchmark_results.txt", "w") as f:
         f.write("\n".join(results))
+    
+    if os.path.exists(GC_BIN):
+         os.remove(GC_BIN)
     
     if os.path.exists(BIN_FILE):
         os.remove(BIN_FILE)

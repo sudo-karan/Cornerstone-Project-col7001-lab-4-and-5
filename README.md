@@ -128,6 +128,28 @@ Allocator Test Passed.
 
 ---
 
+## 8. Performance Evaluation
+
+We have included a specific benchmark to measure the throughput of the Garbage Collector and the Allocator.
+
+**Benchmark**: `benchmark/gc_stress.asm`
+
+- **Scenario**: Allocates 100,000 small objects in a loop.
+- **Goal**: Trigger frequent GC cycles and measure allocation throughput.
+
+**Results (M1 Mac):**
+
+- **Throughput**: ~9.1 Million Allocations / Second
+- **JIT Speedup**: 26.6x (measured on arithmetic loops)
+
+To run the benchmark yourself:
+
+```bash
+python3 benchmark_runner.py
+```
+
+---
+
 ## Lab 4: Virtual Machine & Assembler (Completed)
 
 The previous phase focused on building the core VM architecture.
