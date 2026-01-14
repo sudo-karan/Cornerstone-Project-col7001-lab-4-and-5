@@ -92,6 +92,11 @@ void sweep(VM *vm) {
             curr = next;
         }
     }
+    
+    // Optimization: If heap is completely empty, reset bump pointer
+    if (vm->allocated_list == -1) {
+        vm->free_ptr = 0;
+    }
 }
 
 void vm_gc(VM *vm) {
