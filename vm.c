@@ -321,9 +321,11 @@ void run_vm(VM *vm) {
             // Header: 3 words [Size, Next, Marked]
             int needed = size + 3; 
             if (vm->free_ptr + needed > HEAP_SIZE) {
-                // TODO: Trigger Garbage Collection
-                error(vm, "Heap Overflow");
-                break;
+                vm_gc(vm); // Trigger Garbage Collection
+                if (vm->free_ptr + needed > HEAP_SIZE) { // Retry Allocation
+                    error(vm, "Heap Overflow");
+                    break;
+                }
             }
 
             int32_t addr = vm->free_ptr;
