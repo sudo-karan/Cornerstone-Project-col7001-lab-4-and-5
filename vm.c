@@ -4,6 +4,7 @@
 #include <string.h>
 #include "opcodes.h"
 #include "jit.h"
+#include <time.h>
 
 #define STACK_SIZE 256
 #define MEM_SIZE 1024
@@ -28,6 +29,11 @@ typedef struct {
     int pc;                // Program Counter
     int running;
     int error;             // Error flag
+    // GC Statistics
+    int stats_gc_runs;
+    int stats_freed_objects;
+    double stats_total_gc_time;
+    int stats_max_heap_used;
 } VM;
 
 // Helper to handle runtime errors safely
@@ -70,13 +76,11 @@ void mark(VM *vm, int32_t addr) {
 void sweep(VM *vm) {
     int32_t *curr_ptr = &vm->allocated_list; // Pointer to the 'next' field of previous node (or head)
     int32_t curr = vm->allocated_list;
-    int freed_count = 0;
 
     while (curr != -1) {
         // curr is index of Header[0] (Size)
         // Header[2] is Mark
         int marked = vm->heap[curr + 2];
-        int size = vm->heap[curr];
         int next = vm->heap[curr + 1];
 
         if (marked) {
@@ -87,8 +91,7 @@ void sweep(VM *vm) {
             // Unlink
             *curr_ptr = next; // Previous node now points to next
             // Essentially "freeing" logic (logical collection)
-            freed_count++;
-            // printf("GC: Freed object at %d (Size %d)\n", curr, size);
+            vm->stats_freed_objects++;
             curr = next;
         }
     }
@@ -100,6 +103,8 @@ void sweep(VM *vm) {
 }
 
 void vm_gc(VM *vm) {
+    clock_t start = clock();
+    vm->stats_gc_runs++;
     // 1. Mark Phase: Scan Stack
     for (int i = 0; i <= vm->sp; i++) {
         int32_t val = vm->stack[i];
@@ -115,6 +120,9 @@ void vm_gc(VM *vm) {
 
     // 2. Sweep Phase
     sweep(vm);
+    
+    clock_t end = clock();
+    vm->stats_total_gc_time += (double)(end - start) / CLOCKS_PER_SEC;
 }
 
 void push(VM *vm, int32_t val) {
@@ -149,6 +157,10 @@ void run_vm(VM *vm) {
     vm->error = 0;
     vm->free_ptr = 0; // Initialize heap pointer to start
     vm->allocated_list = -1; // -1 denotes end of linked list
+    vm->stats_gc_runs = 0;
+    vm->stats_freed_objects = 0;
+    vm->stats_total_gc_time = 0.0;
+    vm->stats_max_heap_used = 0;
 
     // We assume the code size is large enough or trusted, assuming proper loader checks.
     // In a real VM, you'd also check bounds of vm->pc against code size.
@@ -341,6 +353,10 @@ void run_vm(VM *vm) {
             vm->allocated_list = addr;                 // Update List Head
             vm->free_ptr += needed;                    // Advance Pointer
             
+            if (vm->free_ptr > vm->stats_max_heap_used) {
+                vm->stats_max_heap_used = vm->free_ptr;
+            }
+            
             // Push address of payload (skip header) to stack
             push(vm, MEM_SIZE + addr + 3);
             break;
@@ -405,6 +421,11 @@ int run_vm_main(int argc, char **argv) {
             printf("Top of stack: %d\n", vm.stack[vm.sp]);
         else if (!vm.error)
             printf("Stack empty\n");
+
+        if (vm.stats_gc_runs > 0) {
+            printf("[GC Stats] Runs: %d, Freed: %d, Total GC Time: %.6fs, Max Heap: %d words\n", 
+                vm.stats_gc_runs, vm.stats_freed_objects, vm.stats_total_gc_time, vm.stats_max_heap_used);
+        }
     }
 
     free(code);
