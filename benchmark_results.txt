@@ -1,10 +1,14 @@
 ------------------------------------------------------------
 Mode            | Time (s)   | IPS             | Speedup   
 ------------------------------------------------------------
-Interpreter     | 0.6868     | 58,240,087      | 1.0x      
-JIT             | 0.0258     | 1,551,162,270   | 26.6x     
+Interpreter     | 1.3426     | 29,793,699      | 1.0x      
+JIT             | 0.0154     | 2,603,621,466   | 87.4x     
 ------------------------------------------------------------
 
 === GC Performance ===
-Time: 0.0110 seconds
-Throughput: 9,128,173 allocations/sec
+Time (Wall): 0.0083 seconds
+Throughput: 12,068,550 allocations/sec
+GC Runs: 4
+Objects Freed: 52427
+Total Time in GC: 0.000162 seconds
+Max Heap Usage: 65535 words

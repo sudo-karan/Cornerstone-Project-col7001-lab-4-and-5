@@ -55,15 +55,33 @@ def run_benchmark():
     
     print(f"Running GC Benchmark ({GC_ITER} allocations)...")
     start_gc = time.time()
-    subprocess.call(["./vm", GC_BIN], stdout=subprocess.DEVNULL) # Use call to ignore potential non-zero exit if any
+    proc_gc = subprocess.run(["./vm", GC_BIN], capture_output=True, text=True)
     end_gc = time.time()
     duration_gc = end_gc - start_gc
     allocs_per_sec = GC_ITER / duration_gc
     
+    # Parse GC Stats
+    gc_runs = 0
+    freed_objs = 0
+    gc_time = 0.0
+    max_heap = 0
+    
+    import re
+    match = re.search(r"Runs: (\d+), Freed: (\d+), Total GC Time: ([\d.]+)s, Max Heap: (\d+) words", proc_gc.stdout)
+    if match:
+        gc_runs = int(match.group(1))
+        freed_objs = int(match.group(2))
+        gc_time = float(match.group(3))
+        max_heap = int(match.group(4))
+    
     gc_results = [
         "\n=== GC Performance ===",
-        f"Time: {duration_gc:.4f} seconds",
-        f"Throughput: {allocs_per_sec:,.0f} allocations/sec"
+        f"Time (Wall): {duration_gc:.4f} seconds",
+        f"Throughput: {allocs_per_sec:,.0f} allocations/sec",
+        f"GC Runs: {gc_runs}",
+        f"Objects Freed: {freed_objs}",
+        f"Total Time in GC: {gc_time:.6f} seconds",
+        f"Max Heap Usage: {max_heap} words"
     ]
     for line in gc_results:
         print(line)
